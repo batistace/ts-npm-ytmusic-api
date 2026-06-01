@@ -1,83 +1,106 @@
-import { ArtistBasic, PlaylistDetailed, PlaylistFull } from "../types"
-import checkType from "../utils/checkType"
-import { isArtist } from "../utils/filters"
-import { traverse, traverseList, traverseString } from "../utils/traverse"
+import { ArtistBasic, PlaylistDetailed, PlaylistFull } from "../types";
+import checkType from "../utils/checkType";
+import { isArtist } from "../utils/filters";
+import { traverse, traverseList, traverseString } from "../utils/traverse";
 
 export default class PlaylistParser {
 	public static parse(data: any, playlistId: string): PlaylistFull {
-		const artist = traverse(data, "tabs", "straplineTextOne")
+		const artist = traverse(data, "tabs", "straplineTextOne");
+
+		const rawVideoCount =
+			traverseList(data, "tabs", "secondSubtitle", "text") || [];
+
+		const videoCountText = rawVideoCount?.at?.(2);
+
+		const videoCount = (() => {
+			try {
+				if (!videoCountText) return null;
+
+				const number = videoCountText
+					.split(" ")
+					?.at?.(0)
+					?.replaceAll(",", "");
+
+				if (!number || isNaN(Number(number))) return null;
+
+				return Number(number);
+			} catch {
+				return null;
+			}
+		})();
 
 		return checkType(
 			{
 				type: "PLAYLIST",
-				playlistId,
-				name: traverseString(data, "tabs", "title", "text"),
+				playlistId: playlistId || "",
+				name:
+					traverseString(data, "tabs", "title", "text") ||
+					"Unknown Playlist",
 				artist: {
-					name: traverseString(artist, "text"),
+					name: traverseString(artist, "text") || "Unknown Artist",
 					artistId: traverseString(artist, "browseId") || null,
 				},
-				videoCount:
-					+traverseList(data, "tabs", "secondSubtitle", "text")
-						.at(2)
-						.split(" ")
-						.at(0)
-						.replaceAll(",", "") ?? null,
-				thumbnails: traverseList(data, "tabs", "thumbnails"),
+				videoCount,
+				thumbnails: traverseList(data, "tabs", "thumbnails") || [],
 			},
 			PlaylistFull,
-		)
+		);
 	}
 
 	public static parseSearchResult(item: any): PlaylistDetailed {
-		const columns = traverseList(item, "flexColumns", "runs").flat()
+		const columns = (traverseList(item, "flexColumns", "runs") || []).flat();
 
-		// No specific way to identify the title
-		const title = columns[0]
-		const artist = columns.find(isArtist) || columns[3]
+		const title = columns?.[0];
+		const artist = columns.find(isArtist) || columns?.[3];
 
 		return checkType(
 			{
 				type: "PLAYLIST",
-				playlistId: traverseString(item, "overlay", "playlistId"),
-				name: traverseString(title, "text"),
+				playlistId: traverseString(item, "overlay", "playlistId") || "",
+				name: traverseString(title, "text") || "Unknown Playlist",
 				artist: {
-					name: traverseString(artist, "text"),
+					name: traverseString(artist, "text") || "Unknown Artist",
 					artistId: traverseString(artist, "browseId") || null,
 				},
-				thumbnails: traverseList(item, "thumbnails"),
+				thumbnails: traverseList(item, "thumbnails") || [],
 			},
 			PlaylistDetailed,
-		)
+		);
 	}
 
-	public static parseArtistFeaturedOn(item: any, artistBasic: ArtistBasic): PlaylistDetailed {
+	public static parseArtistFeaturedOn(
+		item: any,
+		artistBasic: ArtistBasic,
+	): PlaylistDetailed {
 		return checkType(
 			{
 				type: "PLAYLIST",
-				playlistId: traverseString(item, "navigationEndpoint", "browseId"),
-				name: traverseString(item, "runs", "text"),
+				playlistId:
+					traverseString(item, "navigationEndpoint", "browseId") || "",
+				name: traverseString(item, "runs", "text") || "Unknown Playlist",
 				artist: artistBasic,
-				thumbnails: traverseList(item, "thumbnails"),
+				thumbnails: traverseList(item, "thumbnails") || [],
 			},
 			PlaylistDetailed,
-		)
+		);
 	}
 
 	public static parseHomeSection(item: any): PlaylistDetailed {
-		const artist = traverse(item, "subtitle", "runs")
+		const artist = traverse(item, "subtitle", "runs");
 
 		return checkType(
 			{
 				type: "PLAYLIST",
-				playlistId: traverseString(item, "navigationEndpoint", "playlistId"),
-				name: traverseString(item, "runs", "text"),
+				playlistId:
+					traverseString(item, "navigationEndpoint", "playlistId") || "",
+				name: traverseString(item, "runs", "text") || "Unknown Playlist",
 				artist: {
-					name: traverseString(artist, "text"),
+					name: traverseString(artist, "text") || "Unknown Artist",
 					artistId: traverseString(artist, "browseId") || null,
 				},
-				thumbnails: traverseList(item, "thumbnails"),
+				thumbnails: traverseList(item, "thumbnails") || [],
 			},
 			PlaylistDetailed,
-		)
+		);
 	}
 }
