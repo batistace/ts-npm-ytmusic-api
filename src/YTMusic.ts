@@ -244,10 +244,15 @@ export default class YTMusic {
 			params: null,
 		})
 
-		return traverseList(searchData, "musicResponsiveListItemRenderer")
-			.map(SearchParser.parse)
-			.filter(Boolean) as SearchResult[]
-	}
+return traverseList(searchData, "musicResponsiveListItemRenderer")
+  .map(SongParser.parseSearchResult)
+  .filter((s: any) => {
+    return (
+      s &&
+      typeof s.videoId === "string" &&
+      s.videoId.length === 11
+    )
+  })
 
 	/**
 	 * Searches YouTube Music API for songs
